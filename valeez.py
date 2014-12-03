@@ -1,6 +1,7 @@
 import json
 import requests
 import csv
+import datetime
 
 city_destination = {
 	"Boston" : "MA/Boston",
@@ -19,17 +20,6 @@ city_destination = {
 	"Tokyo, JP" : "JY/Tokyo"
 }
 
-# universal variables
-user_destination = raw_input('where are you going?')
-user_destination = city_destination.get(user_destination)
-print user_destination
-user_depart_date = int(raw_input('what day are you leaving?'))
-user_depart_month = int(raw_input('what month are you leaving?'))
-user_number_days = int(raw_input('how long is your trip, in days?'))
-user_sex = raw_input('male or female (enter m or f)?')
-user_biz = raw_input('is this a business formal, business casual or vacation trip (enter f, c, v)?')
-
-
 #lists and dictionaries the functions below will fill in
 all_calendar_days = []
 clothes_to_pack = {}
@@ -39,10 +29,45 @@ all_low_temps_f = []
 all_pop_pct = []
 all_snow_in = []
 
+def today():
+	today = datetime.date.today()
+	today_date = today.day
+	today_month = today.month
+	return today_date, today_month
+
+API_URL = "http://api.wunderground.com/api/ca5b10fb7297c6da/forecast10day/q/"
+
+def inputs(today_month, today_date):
+	user_destination = raw_input('where are you going?')
+	user_destination = city_destination.get(user_destination)
+	print user_destination
+	user_depart_date = int(raw_input('what day are you leaving?'))
+	# if user_depart_date > today_date + 9:
+	# 	print "Date out of range, try a different date"
+	# 	user_depart_date = int(raw_input('what day are you leaving?'))
+	# else:
+	# 	continue
+
+	user_depart_month = int(raw_input('what month are you leaving?'))
+	# if user_depart_month != today_month:
+	# 	print "Date out of range, try a different month"
+	# 	user_depart_month = int(raw_input('what month are you leaving?'))
+	# else: 
+	# 	continue
+
+
+	user_number_days = int(raw_input('how long is your trip, in days?'))
+	user_sex = raw_input('male or female (enter m or f)?')
+	user_biz = raw_input('is this a business formal, business casual or vacation trip (enter f, c, v)?')
+	return user_destination, user_depart_date, user_depart_month, user_number_days, user_sex, user_biz
+
+
+
+
 API_URL = "http://api.wunderground.com/api/ca5b10fb7297c6da/forecast10day/q/"
 
 #this function figures out which calendar days I need to query the API for
-def get_the_days():
+def get_the_days(user_depart_month, user_number_days, user_depart_date):
 	if user_depart_month == 2:
 		for i in range (0, user_number_days):
 			if user_depart_date++i <= 28:
@@ -67,7 +92,7 @@ def get_the_days():
 	return all_calendar_days
 
 #this function calls the API and returns the forecasts for the days of the trip
-def get_the_weather(all_calendar_days):
+def get_the_weather(all_calendar_days, user_destination):
 	#these lists that will contain all of the high and low temps for the timeframe
 
 	r = requests.get("{}{}.json".format(API_URL, user_destination))
@@ -100,7 +125,7 @@ def get_the_weather(all_calendar_days):
 	# print "pop: {}".format(all_pop_pct)
 	# print "inches of snow: {}".format(all_snow_in)
 
-def make_the_valeez(all_high_temps_f, all_pop_pct):
+def make_the_valeez(all_high_temps_f, all_pop_pct, user_sex, user_biz, user_number_days):
 	avg_high_temps_f = sum(all_high_temps_f)/len(all_calendar_days)
 	avg_low_temps_f = sum(all_low_temps_f)/len(all_calendar_days)
 	max_pop_pct = max(all_pop_pct)
@@ -147,25 +172,23 @@ def make_the_valeez(all_high_temps_f, all_pop_pct):
 					clothes_to_pack[garments] = 1
 
 
-
 			rain_column = row[9]
 			if max_pop_pct >= 40 and rain_column == 'True' and avg_high_temps_f >= 55:
 				clothes_to_pack[garments] = 1
 			
-			clothes_to_pack_wquantity = {}
-			for item in clothes_to_pack:
-				clothes_to_pack_wquantity[item] = 1
-				layer_column = row[4]
-				if layer_column == 0:
-					item * user_number_days
-	print "Here's what you should pack: {}".format(clothes_to_pack_wquantity)
+
+	print "Here's what you should pack: {}".format(clothes_to_pack)
 	return clothes_to_pack
-	return clothes_to_pack_wquantity
+
 
 def main():
-	get_the_days()
-	get_the_weather(all_calendar_days)
-	make_the_valeez(all_high_temps_f, all_pop_pct)
+	# inputs()
+	today_date, today_month = today()
+	user_destination, user_depart_date, user_depart_month, user_number_days, user_sex, user_biz = inputs(today_date, today_month)
+	
+	get_the_days(user_depart_month, user_number_days, user_depart_date)
+	get_the_weather(all_calendar_days, user_destination)
+	make_the_valeez(all_high_temps_f, all_pop_pct, user_sex, user_biz, user_number_days)
 	print "Here are all the high temperatures during your {} day trip to {} : {}.".format(user_number_days, user_destination, all_high_temps_f)
 	print "Here are all the low temperatures during your {} day trip to {} : {}.".format(user_number_days, user_destination, all_low_temps_f)
 
